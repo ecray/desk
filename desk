@@ -3,6 +3,7 @@
 
 PREFIX="${DESK_DIR:-$HOME/.desk}"
 DESKS="${DESK_DESKS_DIR:-$PREFIX/desks}"
+COMMON="${DESK_DESKS_DIR:-$PREFIX/common}"
 DESKFILE_NAME=Deskfile
 
 
@@ -200,6 +201,7 @@ cmd_current() {
     fi
 
     local DESKPATH=$DESK_ENV
+    local COMMON_CALLABLES=$(get_common_callables "$COMMON")
     local CALLABLES=$(get_callables "$DESKPATH")
     local AUTO_ALIGN len longest out
 
@@ -230,12 +232,30 @@ cmd_current() {
                 out+="  ${NAME} - ${DOCLINE##\# }"$'\n'
             fi
         done
+    fi
 
-        if [[ "$AUTO_ALIGN" != false ]]; then
-          print_aligned "$out" "$longest"
-        else
-          printf "%s" "$out"
-        fi
+    if [[ -n "$COMMON_CALLABLES" ]]; then
+        for NAME in $COMMON_CALLABLES; do
+            # Last clause in the grep regexp accounts for fish functions.
+            len=$((${#NAME} + 2))
+            (( len > longest )) && longest=$len
+            local DOCLINE=$(
+                grep -Rh -B 1 -E \
+                    "^(alias ${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME" "$COMMON" \
+                    | grep "#")
+
+            if [ -z "$DOCLINE" ]; then
+                out+="  ${NAME}"$'\n'
+            else
+                out+="  ${NAME} - ${DOCLINE##\# }"$'\n'
+            fi
+        done
+    fi
+
+    if [[ "$AUTO_ALIGN" != false ]]; then
+        print_aligned "$out" "$longest"
+    else
+        printf "%s" "$out"
     fi
 }
 
@@ -277,6 +297,19 @@ get_callables() {
         | sed 's/export \([^= ]*\)=.*/\1/' \
         | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
         | sed -E "s/function (${FNAME_CHARS}+).*/\1/"
+}
+
+# Get common libs from PREFIX/common
+get_common_callables() {
+    local COMMON=$1
+    # Check all files in common dir
+    if [[ -d $COMMON ]]; then
+        grep -Rh -E "^(alias |export |(function )?${FNAME_CHARS}+ ?\()|function $NAME" "$COMMON" \
+            | sed 's/alias \([^= ]*\)=.*/\1/' \
+            | sed 's/export \([^= ]*\)=.*/\1/' \
+            | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
+            | sed -E "s/function (${FNAME_CHARS}+).*/\1/"
+    fi
 }
 
 get_running_shell() {
