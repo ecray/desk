@@ -3,7 +3,7 @@
 
 PREFIX="${DESK_DIR:-$HOME/.desk}"
 DESKS="${DESK_DESKS_DIR:-$PREFIX/desks}"
-COMMON="${DESK_DESKS_DIR:-$PREFIX/common}"
+COMMON="${DESK_COMMON_DIR:-$PREFIX/common}"
 DESKFILE_NAME=Deskfile
 
 
